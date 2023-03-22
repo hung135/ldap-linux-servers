@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  openldap:
+    image: osixia/openldap:1.5.0
+    environment:
+      LDAP_ORGANISATION: "ExampleOrg"
+      LDAP_DOMAIN: "example.org"
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_READONLY_USER: "false"
+      LDAP_TLS: "false"
+      LDAP_BASE_DN: "dc=example,dc=org"
+      LDAP_TLS_CACERT_DIR: "/container/service/slapd/assets/certs"
+    volumes:
+      - ldap-data:/var/lib/ldap
+      - ldap-config:/etc/ldap/slapd.d
+    networks:
+      - ldapnet
+
+  phpldapadmin:
+    image: osixia/phpldapadmin:0.9.0
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: "openldap"
+      PHPLDAPADMIN_HTTPS: "false"
+    ports:
+      - "8080:80"
+    depends_on:
+      - openldap
+    networks:
+      - ldapnet
+
+  ssh_server1:
+    build: ./ssh_server
+    environment:
+      - LDAP_DOMAIN=example.org
+    networks:
+      - ldapnet
+
+  ssh_server2:
+    build: ./ssh_server
+    environment:
+      - LDAP_DOMAIN=example.org
+    networks:
+      - ldapnet
+
+  ssh_server3:
+    build: ./ssh_server
+    environment:
+      - LDAP_DOMAIN=example.org
+    networks:
+      - ldapnet
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - ldapnet
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "abc@example.org"
+      PGADMIN_DEFAULT_PASSWORD: "abc123"
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - ldapnet
+
+volumes:
+  ldap-data:
+  ldap-config:
+  postgres-data:
+
+networks:
+  ldapnet:
+    driver: bridge
+
